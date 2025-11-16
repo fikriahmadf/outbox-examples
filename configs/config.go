@@ -61,6 +61,7 @@ type Config struct {
 			CleanupPeriodSeconds int64 `mapstructure:"CLEANUP_PERIOD_SECONDS"`
 			GracePeriodSeconds   int64 `mapstructure:"GRACE_PERIOD_SECONDS"`
 		}
+		LogLevel string `mapstructure:"LOG_LEVEL"`
 	}
 }
 
