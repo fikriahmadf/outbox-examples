@@ -1,6 +1,7 @@
 package infras
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/fikriahmadf/outbox-examples/configs"
-	"github.com/fikriahmadf/outbox-examples/shared/failure"
 )
 
 // TransactionBlock contains a transaction block
@@ -17,15 +17,32 @@ type TransactionBlock func(db *sqlx.Tx, c chan error)
 
 // PostgresConn wraps a pair of read/write PostgreSQL connections.
 type PostgresConn struct {
-	Read  *sqlx.DB
-	Write *sqlx.DB
+	Read  *PostgresDB
+	Write *PostgresDB
+}
+
+type PostgresDB struct {
+	*sqlx.DB
+}
+
+type PostgresTx struct {
+	*sqlx.Tx
+}
+
+func (w *PostgresDB) Beginx(ctx context.Context) (*PostgresTx, error) {
+	tx, err := w.DB.BeginTxx(ctx, nil)
+	if err != nil {
+		log.Error().Err(err).Msg("[PostgresDB][Beginx][SelectContext]")
+		return nil, err
+	}
+	return &PostgresTx{tx}, nil
 }
 
 // ProvidePostgresConn is the provider for PostgresConn.
 func ProvidePostgresConn(config *configs.Config) *PostgresConn {
 	return &PostgresConn{
-		Read:  CreatePostgresReadConn(*config),
-		Write: CreatePostgresWriteConn(*config),
+		Read:  &PostgresDB{CreatePostgresReadConn(*config)},
+		Write: &PostgresDB{CreatePostgresWriteConn(*config)},
 	}
 }
 
@@ -107,26 +124,4 @@ func CreatePostgresDBConnection(connType, username, password, host, port, dbName
 	db.SetMaxOpenConns(maxOpenConn)
 
 	return db
-}
-
-// WithTransaction performs queries with transaction
-func (m *PostgresConn) WithTransaction(block TransactionBlock) (err error) {
-	e := make(chan error)
-	tx, err := m.Write.Beginx()
-	if err != nil {
-		log.Err(err).Msg("error begin transaction")
-		err = failure.InternalError(err)
-		return
-	}
-	go block(tx, e)
-	err = <-e
-	if err != nil {
-		if errTx := tx.Rollback(); errTx != nil {
-			log.Err(errTx).Msg("error rollback transaction")
-			err = failure.InternalError(err)
-		}
-		return
-	}
-	err = tx.Commit()
-	return
 }
