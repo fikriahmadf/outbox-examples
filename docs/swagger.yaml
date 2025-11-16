@@ -1,0 +1,97 @@
+definitions:
+  model.CreateMemoRequest:
+    properties:
+      departmentCode:
+        type: string
+      purpose:
+        type: string
+      title:
+        type: string
+    type: object
+  model.Memo:
+    properties:
+      createdAt:
+        type: string
+      departmentCode:
+        type: string
+      id:
+        type: string
+      memoNumberPrefix:
+        type: string
+      memoNumberSequence:
+        type: integer
+      purpose:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  response.Base:
+    properties:
+      data: {}
+      error:
+        type: string
+      message:
+        type: string
+      metadata: {}
+      requestId:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /health:
+    get:
+      consumes:
+      - application/json
+      description: Health Check Endpoint
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/response.Base'
+        "503":
+          description: Service Unavailable
+          schema:
+            $ref: '#/definitions/response.Base'
+      summary: Health Check
+      tags:
+      - service
+  /v1/internal_memo/memo:
+    post:
+      consumes:
+      - application/json
+      description: Create a new internal memo
+      parameters:
+      - description: Memo payload
+        in: body
+        name: payload
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateMemoRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Memo'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a memo
+      tags:
+      - internal_memo
+swagger: "2.0"

@@ -22,10 +22,17 @@ func ProvideRouter(domainHandlers DomainHandlers) Router {
 	}
 }
 
+// ProvideDomainHandlers constructs DomainHandlers from individual handlers.
+func ProvideDomainHandlers(memoHandler *internal_memo.MemoHandler) DomainHandlers {
+	return DomainHandlers{
+		InternalMemoHandler: memoHandler,
+	}
+}
+
 // SetupRoutes sets up all routing for this server.
 func (r *Router) SetupRoutes(app *fiber.App) {
-    v1 := app.Group("/v1")
-    if r.DomainHandlers.InternalMemoHandler != nil {
-        r.DomainHandlers.InternalMemoHandler.Router(v1)
-    }
+	v1 := app.Group("/v1")
+	if r.DomainHandlers.InternalMemoHandler != nil {
+		r.DomainHandlers.InternalMemoHandler.Router(v1)
+	}
 }

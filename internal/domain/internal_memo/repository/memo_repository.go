@@ -8,13 +8,15 @@ import (
 	"github.com/fikriahmadf/outbox-examples/shared/failure"
 )
 
+const MEMO_PREFIX = "MEMO-"
+
 var (
 	memoQueries = struct {
 		insertMemo string
 		countMemo  string
 	}{
-		insertMemo: "INSERT INTO \"memo\" %s VALUES %s",
-		countMemo:  "SELECT COUNT(*) FROM \"memo\"",
+		insertMemo: "INSERT INTO \"memos\" %s VALUES %s",
+		countMemo:  "SELECT COUNT(*) FROM \"memos\"",
 	}
 )
 
@@ -37,7 +39,7 @@ func (r *InternalMemoRepositoryPostgres) CreateMemo(ctx context.Context, memo *m
 	insertQuery := fmt.Sprintf(memoQueries.insertMemo, "(id, memo_number_prefix, memo_number_sequence, department_code, title, purpose, created_at, updated_at)", "($1, $2, $3, $4, $5, $6, $7, $8)")
 	argsList := []any{
 		memo.ID,
-		memo.MemoNumberPrefix,
+		MEMO_PREFIX,
 		count + 1,
 		memo.DepartmentCode,
 		memo.Title,

@@ -4,11 +4,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 type EmailOutbox struct {
-	ID               string          `json:"id" db:"id"`
-	MemoID           string          `json:"memoId" db:"memo_id"`
+	ID               uuid.UUID       `json:"id" db:"id"`
+	MemoID           uuid.UUID       `json:"memoId" db:"memo_id"`
 	EventType        string          `json:"eventType" db:"event_type"`
 	Payload          json.RawMessage `json:"payload" db:"payload"`
 	RecipientEmail   string          `json:"recipientEmail" db:"recipient_email"`

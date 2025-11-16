@@ -20,6 +20,9 @@ type Config struct {
 			Enable           bool     `mapstructure:"ENABLE"`
 			MaxAgeSeconds    int      `mapstructure:"MAX_AGE_SECONDS"`
 		}
+		Name     string `mapstructure:"NAME"`
+		URL      string `mapstructure:"URL"`
+		Revision string `mapstructure:"REVISION"`
 	}
 
 	DB struct {

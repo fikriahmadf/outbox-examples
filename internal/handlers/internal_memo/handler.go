@@ -19,9 +19,9 @@ func ProvideMemoHandler(config *configs.Config, memoRepo repository.MemoReposito
 }
 
 func (h *MemoHandler) Router(r fiber.Router) {
-    r.Route("/internal_memo", func(router fiber.Router) {
-        router.Route("/memo", func(router fiber.Router) {
-            router.Post("/", h.CreateMemo)
-        })
-    })
+	r.Route("/internal_memo", func(router fiber.Router) {
+		router.Route("/memo", func(router fiber.Router) {
+			router.Post("", h.CreateMemo)
+		})
+	})
 }

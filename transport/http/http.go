@@ -9,11 +9,13 @@ import (
 	"time"
 
 	"github.com/fikriahmadf/outbox-examples/configs"
+	docs "github.com/fikriahmadf/outbox-examples/docs"
 	"github.com/fikriahmadf/outbox-examples/infras"
 	"github.com/fikriahmadf/outbox-examples/shared/logger"
 	"github.com/fikriahmadf/outbox-examples/transport/http/router"
 	"github.com/gofiber/fiber/v2"
 	"github.com/rs/zerolog/log"
+	fiberSwagger "github.com/swaggo/fiber-swagger"
 )
 
 // ServerState is an indicator if this server's state.
@@ -54,6 +56,7 @@ func (h *HTTP) SetupAndServe() {
 	h.fiber = fiber.New()
 	h.setupSwaggerDocs()
 	h.setupRoutes()
+	h.setupCORS()
 	h.setupGracefulShutdown()
 	h.State = ServerStateReady
 
@@ -68,7 +71,13 @@ func (h *HTTP) SetupAndServe() {
 }
 
 func (h *HTTP) setupSwaggerDocs() {
-	// TODO: integrate fiber-swagger if needed
+	if h.Config.IsServerEnvDevelopment() {
+		docs.SwaggerInfo.Title = h.Config.App.Name
+		docs.SwaggerInfo.Version = h.Config.App.Revision
+		swaggerURL := fmt.Sprintf("%s/swagger/doc.json", h.Config.App.URL)
+		h.fiber.Get("/swagger/*", fiberSwagger.WrapHandler)
+		log.Info().Str("url", swaggerURL).Msg("Swagger documentation enabled.")
+	}
 }
 
 func (h *HTTP) setupRoutes() {

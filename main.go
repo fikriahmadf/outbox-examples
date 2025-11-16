@@ -7,11 +7,10 @@ import (
 )
 
 func main() {
-	application, err := app.InitializeApplication()
+	server, err := app.InitializeServer()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to initialize application")
+		log.Fatal().Err(err).Msg("failed to initialize server")
 	}
-
-	log.Info().Msg("application initialized")
-	_ = application
+	log.Info().Msg("server initialized")
+	server.SetupAndServe()
 }

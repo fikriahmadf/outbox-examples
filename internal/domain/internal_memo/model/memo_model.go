@@ -1,30 +1,38 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"time"
 
-type Memo struct {
-	ID                 string `json:"id" db:"id"`
-	MemoNumberPrefix   string `json:"memoNumberPrefix" db:"memo_number_prefix"`
-	MemoNumberSequence int    `json:"memoNumberSequence" db:"memo_number_sequence"`
-	DepartmentCode     string `json:"departmentCode" db:"department_code"`
-	Title              string `json:"title" db:"title"`
-	Purpose            string `json:"purpose" db:"purpose"`
-	CreatedAt          string `json:"createdAt" db:"created_at"`
-	UpdatedAt          string `json:"updatedAt" db:"updated_at"`
+	"github.com/google/uuid"
+)
+
+type CreateMemoRequest struct {
+	DepartmentCode string `json:"departmentCode" db:"department_code"`
+	Title          string `json:"title" db:"title"`
+	Purpose        string `json:"purpose" db:"purpose"`
 }
 
-func (m *Memo) ToNewModel() Memo {
+func (m *CreateMemoRequest) ToNewModel() Memo {
 
 	id, _ := uuid.NewV7()
 
 	return Memo{
-		ID:                 id,
-		MemoNumberPrefix:   m.MemoNumberPrefix,
-		MemoNumberSequence: m.MemoNumberSequence,
-		DepartmentCode:     m.DepartmentCode,
-		Title:              m.Title,
-		Purpose:            m.Purpose,
-		CreatedAt:          m.CreatedAt,
-		UpdatedAt:          m.UpdatedAt,
+		ID:             id,
+		DepartmentCode: m.DepartmentCode,
+		Title:          m.Title,
+		Purpose:        m.Purpose,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
 	}
+}
+
+type Memo struct {
+	ID                 uuid.UUID `json:"id,omitempty" db:"id"`
+	MemoNumberPrefix   string    `json:"memoNumberPrefix" db:"memo_number_prefix"`
+	MemoNumberSequence int       `json:"memoNumberSequence" db:"memo_number_sequence"`
+	DepartmentCode     string    `json:"departmentCode" db:"department_code"`
+	Title              string    `json:"title" db:"title"`
+	Purpose            string    `json:"purpose" db:"purpose"`
+	CreatedAt          time.Time `json:"createdAt,omitempty" db:"created_at"`
+	UpdatedAt          time.Time `json:"updatedAt,omitempty" db:"updated_at"`
 }
