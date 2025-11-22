@@ -14,6 +14,10 @@ import (
 
 type InternalMemoRepository interface {
 	MemoRepository
+	EmailOutboxRepository
+	BeginTx(ctx context.Context) (InternalMemoRepository, error)
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
 }
 
 // InternalMemoRepositoryPostgres is the Postgres-backed implementation of InternalMemoRepository.
@@ -34,9 +38,16 @@ func (repo *InternalMemoRepositoryPostgres) exec(ctx context.Context, command st
 		stmt *sqlx.Stmt
 		err  error
 	)
-	stmt, err = repo.DB.Write.PreparexContext(ctx, command)
+
+	if repo.dbTx != nil {
+		stmt, err = repo.dbTx.PreparexContext(ctx, command)
+	} else {
+		stmt, err = repo.DB.Write.PreparexContext(ctx, command)
+	}
+
 	if err != nil {
-		return nil, failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][exec] prepare statement failed")
+		return nil, err
 	}
 
 	defer func() {
@@ -48,7 +59,8 @@ func (repo *InternalMemoRepositoryPostgres) exec(ctx context.Context, command st
 
 	result, err := stmt.ExecContext(ctx, args...)
 	if err != nil {
-		return nil, failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][exec] execute statement failed")
+		return nil, err
 	}
 
 	return result, nil

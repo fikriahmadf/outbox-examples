@@ -33,8 +33,7 @@ func InitializeServer() (*httpserver.HTTP, error) {
 		ProvideConfig,
 		infras.ProvidePostgresConn,
 		repository.ProvideInternalMemoRepositoryPostgres,
-		// Also bind to MemoRepository for handler constructor
-		wire.Bind(new(repository.MemoRepository), new(*repository.InternalMemoRepositoryPostgres)),
+		wire.Bind(new(repository.InternalMemoRepository), new(*repository.InternalMemoRepositoryPostgres)),
 		internalmemo.ProvideMemoHandler,
 		router.ProvideDomainHandlers,
 		router.ProvideRouter,

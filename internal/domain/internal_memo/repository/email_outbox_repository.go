@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/model"
-	"github.com/fikriahmadf/outbox-examples/shared/failure"
+	"github.com/rs/zerolog/log"
 )
 
 var (
@@ -19,8 +19,8 @@ var (
 func (r *InternalMemoRepositoryPostgres) CreateEmailOutbox(ctx context.Context, emailOutbox *model.EmailOutbox) error {
 	insertQuery := fmt.Sprintf(
 		emailOutboxQueries.insertEmailOutbox,
-		"(id, memo_id, event_type, payload, recipient_email, notification_type, status, retry_count, last_attempt_at, sent_at, error_message, idempotency_key, meta_created_at, meta_updated_at)",
-		"($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)",
+		"(id, memo_id, event_type, payload, recipient_email, status, retry_count, idempotency_key, meta_created_at)",
+		"($1, $2, $3, $4, $5, $6, $7, $8, $9)",
 	)
 	argsList := []any{
 		emailOutbox.ID,
@@ -28,19 +28,15 @@ func (r *InternalMemoRepositoryPostgres) CreateEmailOutbox(ctx context.Context, 
 		emailOutbox.EventType,
 		emailOutbox.Payload,
 		emailOutbox.RecipientEmail,
-		emailOutbox.NotificationType,
 		emailOutbox.Status,
 		emailOutbox.RetryCount,
-		emailOutbox.LastAttemptAt,
-		emailOutbox.SentAt,
-		emailOutbox.ErrorMessage,
 		emailOutbox.IdempotencyKey,
 		emailOutbox.MetaCreatedAt,
-		emailOutbox.MetaUpdatedAt,
 	}
 	_, err := r.exec(ctx, insertQuery, argsList)
 	if err != nil {
-		return failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][CreateEmailOutbox] failed to create email outbox")
+		return err
 	}
 	return nil
 }

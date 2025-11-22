@@ -7,14 +7,14 @@ import (
 )
 
 type MemoHandler struct {
-	Config   *configs.Config
-	MemoRepo repository.MemoRepository
+	Config                 *configs.Config
+	InternalMemoRepository repository.InternalMemoRepository
 }
 
-func ProvideMemoHandler(config *configs.Config, memoRepo repository.MemoRepository) *MemoHandler {
+func ProvideMemoHandler(config *configs.Config, intMemoRepo repository.InternalMemoRepository) *MemoHandler {
 	return &MemoHandler{
-		Config:   config,
-		MemoRepo: memoRepo,
+		Config:                 config,
+		InternalMemoRepository: intMemoRepo,
 	}
 }
 
