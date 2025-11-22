@@ -2,19 +2,22 @@ package internal_memo
 
 import (
 	"github.com/fikriahmadf/outbox-examples/configs"
+	"github.com/fikriahmadf/outbox-examples/external/domain/notif_publisher/service"
 	"github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/repository"
 	"github.com/gofiber/fiber/v2"
 )
 
 type MemoHandler struct {
-	Config                 *configs.Config
-	InternalMemoRepository repository.InternalMemoRepository
+	Config                        *configs.Config
+	InternalMemoRepository        repository.InternalMemoRepository
+	ExternalNotifPublisherService service.ExternalNotifPublisherService
 }
 
-func ProvideMemoHandler(config *configs.Config, intMemoRepo repository.InternalMemoRepository) *MemoHandler {
+func ProvideMemoHandler(config *configs.Config, intMemoRepo repository.InternalMemoRepository, extNotifPublisherService service.ExternalNotifPublisherService) *MemoHandler {
 	return &MemoHandler{
-		Config:                 config,
-		InternalMemoRepository: intMemoRepo,
+		Config:                        config,
+		InternalMemoRepository:        intMemoRepo,
+		ExternalNotifPublisherService: extNotifPublisherService,
 	}
 }
 

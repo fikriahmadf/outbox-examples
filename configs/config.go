@@ -71,6 +71,16 @@ type Config struct {
 			Recipient string `mapstructure:"RECIPIENT"`
 		}
 	}
+	External struct {
+		N8N struct {
+			BaseURL       string        `mapstructure:"BASE_URL"`
+			RetryCount    int           `mapstructure:"RETRY_COUNT"`
+			RetryWaitTime time.Duration `mapstructure:"RETRY_WAIT_TIME"`
+			Endpoints     struct {
+				SendMemoNotifPath string `mapstructure:"SEND_MEMO_NOTIF_PATH"`
+			}
+		}
+	}
 }
 
 func (c Config) IsServerEnvDevelopment() bool { return c.Server.Env == "development" }
