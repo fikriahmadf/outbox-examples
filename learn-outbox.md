@@ -28,7 +28,6 @@ sequenceDiagram
     DB-->>APP: Commit transaction
 
     OUT->>DB: SELECT PENDING events FOR UPDATE SKIP LOCKED
-    OUT->>OUT: Mark status = SENDING
     OUT->>SMTP: Send email
 
     alt success
@@ -85,9 +84,9 @@ create table email_outbox (
 ```
 
 * __Indexes__ `learn-outbox.sql` creates:
-  * `ux_email_outbox_idempotent` on `(idempotency_key)` for duplicate protection.
-  * `ix_email_outbox_status_created_at` to optimize worker polling.
-  * `ix_email_outbox_memo_id` for joins back to `memos`.
+    * `ux_email_outbox_idempotent` on `(idempotency_key)` for duplicate protection.
+    * `ix_email_outbox_status_created_at` to optimize worker polling.
+    * `ix_email_outbox_memo_id` for joins back to `memos`.
 
 ---
 
@@ -207,15 +206,6 @@ func ProcessOutbox(ctx context.Context, db *sql.DB, limiter int) error {
     }
 
     for _, j := range jobs {
-        if _, err := tx.ExecContext(ctx,
-            `UPDATE email_outbox
-             SET status = 'SENDING', last_attempt_at = now(), meta_updated_at = now()
-             WHERE id = $1`,
-            j.id,
-        ); err != nil {
-            return fmt.Errorf("mark sending: %w", err)
-        }
-
         if err := sendEmail(j.recipient, j.payload); err != nil {
             status := "PENDING"
             if j.retryCount+1 >= 5 {
@@ -226,6 +216,7 @@ func ProcessOutbox(ctx context.Context, db *sql.DB, limiter int) error {
                  SET retry_count = retry_count + 1,
                      error_message = $2,
                      status = $3,
+                     last_attempt_at = now(),
                      meta_updated_at = now()
                  WHERE id = $1`,
                 j.id, err.Error(), status,
@@ -237,7 +228,7 @@ func ProcessOutbox(ctx context.Context, db *sql.DB, limiter int) error {
 
         if _, err := tx.ExecContext(ctx,
             `UPDATE email_outbox
-             SET status = 'SENT', sent_at = now(), meta_updated_at = now(), error_message = null
+             SET status = 'SENT', sent_at = now(), last_attempt_at = now(), meta_updated_at = now(), error_message = null
              WHERE id = $1`,
             j.id,
         ); err != nil {
@@ -268,14 +259,13 @@ Using `FOR UPDATE SKIP LOCKED` allows multiple workers to poll the same table wi
 ## 7. Status Lifecycle
 
 ```
-PENDING → SENDING → SENT
-    │         │
-    │         └── retry failure → FAILED
+PENDING → SENT
+    │
+    └── retry failure → FAILED
     └── manual replay resets to PENDING
 ```
 
-* __PENDING__ Ready to be claimed.
-* __SENDING__ Currently being processed by a worker.
+* __PENDING__ Ready to be claimed. Worker holds a row lock while attempting delivery.
 * __SENT__ Successfully confirmed by the email provider.
 * __FAILED__ Retries exhausted; requires operator action.
 

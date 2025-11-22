@@ -5,6 +5,7 @@ type SendMemoNotifRequest struct {
 	MemoId         string `json:"memoId"`
 	MemoTitle      string `json:"memoTitle"`
 	CreatedDate    string `json:"createdDate"`
+	SubjectEmail   string `json:"subjectEmail"`
 }
 
 type SendMemoNotifResponse struct {
