@@ -7,6 +7,7 @@
 package app
 
 import (
+	"github.com/fikriahmadf/outbox-examples/external/domain/notif_publisher/service"
 	"github.com/fikriahmadf/outbox-examples/infras"
 	"github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/repository"
 	"github.com/fikriahmadf/outbox-examples/internal/handlers/internal_memo"
@@ -16,21 +17,13 @@ import (
 
 // Injectors from wire.go:
 
-// InitializeApplication constructs an Application using compile-time dependency injection.
-func InitializeApplication() (*Application, error) {
-	config := ProvideConfig()
-	postgresConn := infras.ProvidePostgresConn(config)
-	internalMemoRepositoryPostgres := repository.ProvideInternalMemoRepositoryPostgres(postgresConn)
-	application := NewApplication(config, postgresConn, internalMemoRepositoryPostgres)
-	return application, nil
-}
-
 // InitializeServer constructs the HTTP server with all handlers using compile-time DI.
 func InitializeServer() (*http.HTTP, error) {
 	config := ProvideConfig()
 	postgresConn := infras.ProvidePostgresConn(config)
 	internalMemoRepositoryPostgres := repository.ProvideInternalMemoRepositoryPostgres(postgresConn)
-	memoHandler := internal_memo.ProvideMemoHandler(config, internalMemoRepositoryPostgres)
+	externalNotifPublisherServiceImpl := service.ProvideNotifPublisherService(config)
+	memoHandler := internal_memo.ProvideMemoHandler(config, internalMemoRepositoryPostgres, externalNotifPublisherServiceImpl)
 	domainHandlers := router.ProvideDomainHandlers(memoHandler)
 	routerRouter := router.ProvideRouter(domainHandlers)
 	httpHTTP := http.ProvideHTTP(postgresConn, config, routerRouter)
