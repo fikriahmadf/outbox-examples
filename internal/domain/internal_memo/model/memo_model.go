@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/fikriahmadf/outbox-examples/external/domain/notif_publisher/model"
 	"github.com/google/uuid"
 )
 
@@ -56,6 +57,32 @@ func (m *Memo) GetIdempotencyKeyForOutbox(eventType MemoEventType, recipientEmai
 	return fmt.Sprintf("%s-%s-%s", eventType.String(), m.ID.String(), recipientEmail)
 }
 
+func (m *Memo) GetMemoNumber() string {
+
+	return fmt.Sprintf("%s%d", m.MemoNumberPrefix, m.MemoNumberSequence)
+}
+
+func (m *Memo) GetPayloadForOutbox(eventType MemoEventType, recipientEmail string) json.RawMessage {
+
+	switch eventType {
+	case MemoEventUnknown:
+		return json.RawMessage(`{}`)
+	case MemoEventCreated:
+		payload := model.SendMemoNotifRequest{
+			RecipientEmail: recipientEmail,
+			MemoId:         m.ID.String(),
+			MemoTitle:      m.Title,
+			CreatedDate:    m.CreatedAt.Format("2006-01-02 15:04:05"),
+			SubjectEmail:   fmt.Sprintf("Internal Memo Notification - New Memo Created - %s - %s", m.Title, m.GetMemoNumber()),
+		}
+
+		marsharledPayload, _ := json.Marshal(payload)
+		return marsharledPayload
+	}
+
+	return json.RawMessage(`{}`)
+}
+
 func (m *Memo) ToOutboxModel(eventType MemoEventType, recipientEmail string) EmailOutbox {
 
 	var idempotencyKey string
@@ -73,7 +100,7 @@ func (m *Memo) ToOutboxModel(eventType MemoEventType, recipientEmail string) Ema
 		ID:             id,
 		MemoID:         m.ID,
 		EventType:      eventType.String(),
-		Payload:        json.RawMessage(`{}`), // TODO
+		Payload:        m.GetPayloadForOutbox(eventType, recipientEmail),
 		RecipientEmail: recipientEmail,
 		Status:         StatusPending.String(),
 		RetryCount:     0,

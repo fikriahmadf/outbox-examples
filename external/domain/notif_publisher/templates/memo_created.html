@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{{subject}}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f8fafc;
+        color: #1f2933;
+        padding: 24px;
+      }
+      .card {
+        max-width: 600px;
+        margin: 0 auto;
+        background: #ffffff;
+        border-radius: 8px;
+        box-shadow: 0 3px 10px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+      }
+      .card__header {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 24px;
+      }
+      .card__body {
+        padding: 24px;
+      }
+      .card__footer {
+        padding: 0 24px 24px 24px;
+        font-size: 13px;
+        color: #64748b;
+      }
+      .details {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .details th {
+        text-align: left;
+        padding: 8px 0;
+        width: 160px;
+        font-size: 14px;
+        font-weight: 600;
+        color: #475569;
+      }
+      .details td {
+        padding: 8px 0;
+        font-size: 14px;
+        color: #0f172a;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="card__header">
+        <h1 style="margin: 0; font-size: 20px">Internal Memo Notification</h1>
+      </div>
+      <div class="card__body">
+        <p style="margin-top: 0; font-size: 16px">
+          A new internal memo has been created. Here are the details:
+        </p>
+        <table class="details">
+          <tr>
+            <th>Memo Title</th>
+            <td>{{memoTitle}}</td>
+          </tr>
+          <tr>
+            <th>Memo ID</th>
+            <td>{{memoId}}</td>
+          </tr>
+          <tr>
+            <th>Created Date</th>
+            <td>{{createdDate}}</td>
+          </tr>
+          <tr>
+            <th>Recipient</th>
+            <td>{{recipientEmail}}</td>
+          </tr>
+        </table>
+      </div>
+      <div class="card__footer">
+        This email was generated automatically. Please reach out to the memo
+        owner if you have questions.
+      </div>
+    </div>
+  </body>
+</html>

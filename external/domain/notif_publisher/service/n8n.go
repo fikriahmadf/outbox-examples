@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 
 	"github.com/fikriahmadf/outbox-examples/external/domain/notif_publisher/model"
 	"github.com/rs/zerolog/log"
@@ -17,8 +18,9 @@ func (s *ExternalNotifPublisherServiceImpl) SendMemoNotif(ctx context.Context, r
 	}
 
 	if resp.IsError() {
+		newError := fmt.Errorf("[N8NService][SendMemoNotif] failed to send memo notif")
 		log.Warn().Err(err).Msg("[N8NService][SendMemoNotif] failed to send memo notif")
-		return res, err
+		return res, newError
 	}
 
 	err = json.Unmarshal(resp.Body(), &res)
