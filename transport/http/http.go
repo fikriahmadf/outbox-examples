@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -11,6 +12,7 @@ import (
 	"github.com/fikriahmadf/outbox-examples/configs"
 	docs "github.com/fikriahmadf/outbox-examples/docs"
 	"github.com/fikriahmadf/outbox-examples/infras"
+	internalMemoService "github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/service"
 	"github.com/fikriahmadf/outbox-examples/shared/logger"
 	"github.com/fikriahmadf/outbox-examples/transport/http/router"
 	"github.com/gofiber/fiber/v2"
@@ -35,24 +37,35 @@ const (
 
 // HTTP is the HTTP server.
 type HTTP struct {
-	Config *configs.Config
-	DB     *infras.PostgresConn
-	Router router.Router
-	State  ServerState
-	fiber  *fiber.App
+	Config              *configs.Config
+	DB                  *infras.PostgresConn
+	Router              router.Router
+	InternalMemoService internalMemoService.InternalMemoService
+	State               ServerState
+	fiber               *fiber.App
+	workerCancel        context.CancelFunc
 }
 
 // ProvideHTTP is the provider for HTTP.
-func ProvideHTTP(db *infras.PostgresConn, config *configs.Config, router router.Router) *HTTP {
+func ProvideHTTP(db *infras.PostgresConn, config *configs.Config, router router.Router, memoService internalMemoService.InternalMemoService) *HTTP {
 	return &HTTP{
-		DB:     db,
-		Config: config,
-		Router: router,
+		DB:                  db,
+		Config:              config,
+		Router:              router,
+		InternalMemoService: memoService,
 	}
 }
 
 // SetupAndServe sets up the server and gets it up and running.
 func (h *HTTP) SetupAndServe() {
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+
+	h.workerCancel = workerCancel
+	if h.InternalMemoService != nil {
+		h.startOutboxWorker(workerCtx)
+	}
+
 	h.fiber = fiber.New()
 	h.setupSwaggerDocs()
 	h.setupRoutes()
@@ -95,6 +108,8 @@ func (h *HTTP) respondToSigterm(done chan os.Signal) {
 	<-done
 	defer os.Exit(0)
 
+	h.stopOutboxWorker()
+
 	shutdownConfig := h.Config.Server.Shutdown
 
 	log.Info().Msg("Received SIGTERM.")
@@ -111,6 +126,35 @@ func (h *HTTP) respondToSigterm(done chan os.Signal) {
 
 func (h *HTTP) logServerInfo() {
 	h.logCORSConfigInfo()
+}
+
+func (h *HTTP) startOutboxWorker(ctx context.Context) {
+	log.Info().Msg("Starting internal memo outbox worker loop")
+	go func() {
+		ticker := time.NewTicker(5 * time.Second)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				log.Info().Msg("Internal memo outbox worker stopped")
+				return
+			case <-ticker.C:
+				runCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+				if err := h.InternalMemoService.OutboxProcessor(runCtx); err != nil {
+					log.Error().Err(err).Msg("Internal memo outbox processor failed")
+				}
+				cancel()
+			}
+		}
+	}()
+}
+
+func (h *HTTP) stopOutboxWorker() {
+	if h.workerCancel != nil {
+		h.workerCancel()
+		h.workerCancel = nil
+		log.Info().Msg("Signaled internal memo outbox worker to stop")
+	}
 }
 
 func (h *HTTP) logCORSConfigInfo() {

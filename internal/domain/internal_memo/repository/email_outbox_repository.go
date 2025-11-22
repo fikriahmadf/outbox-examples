@@ -13,13 +13,13 @@ var (
 	emailOutboxQueries = struct {
 		insertEmailOutbox         string
 		resolvePendingEmailOutbox string
-		updateOutboxProcess       string
+		updateErrorOutboxProcess  string
 		UpdateSentOutboxProcess   string
 	}{
 		insertEmailOutbox:         "INSERT INTO \"email_outbox\" %s VALUES %s",
-		resolvePendingEmailOutbox: "SELECT * FROM \"email_outbox\" WHERE status = 'PENDING' ORDER BY meta_created_at FOR UPDATE SKIP LOCKED LIMIT $1",
-		updateOutboxProcess:       "UPDATE \"email_outbox\" SET retry_count = $1, error_message = $2, status = $3, last_attempt_at = $4, meta_updated_at =$5 WHERE id = $6",
-		UpdateSentOutboxProcess:   "UPDATE \"email_outbox\" SET status = 'SENT', sent_at = $1, last_attempt_at = $2, meta_updated_at =$3, error_message = NULL WHERE id = $4",
+		resolvePendingEmailOutbox: "SELECT * FROM \"email_outbox\" WHERE status = 'pending' ORDER BY meta_created_at FOR UPDATE SKIP LOCKED LIMIT $1",
+		updateErrorOutboxProcess:  "UPDATE \"email_outbox\" SET retry_count = $1, error_message = $2, status = $3, last_attempt_at = $4, meta_updated_at =$5 WHERE id = $6",
+		UpdateSentOutboxProcess:   "UPDATE \"email_outbox\" SET status = 'sent', sent_at = $1, last_attempt_at = $2, meta_updated_at =$3, error_message = NULL WHERE id = $4",
 	}
 )
 
@@ -71,7 +71,10 @@ func (r *InternalMemoRepositoryPostgres) ResolvePendingEmailOutbox(ctx context.C
 	var emailOutboxes []model.EmailOutbox
 	for rows.Next() {
 		var emailOutbox model.EmailOutbox
-		if err := rows.Scan(&emailOutbox.ID, &emailOutbox.MemoID, &emailOutbox.EventType, &emailOutbox.Payload, &emailOutbox.RecipientEmail, &emailOutbox.Status, &emailOutbox.RetryCount, &emailOutbox.IdempotencyKey, &emailOutbox.MetaCreatedAt); err != nil {
+		if err := rows.Scan(&emailOutbox.ID, &emailOutbox.MemoID, &emailOutbox.EventType, &emailOutbox.Payload,
+			&emailOutbox.RecipientEmail, &emailOutbox.Status, &emailOutbox.RetryCount,
+			&emailOutbox.LastAttemptAt, &emailOutbox.SentAt, &emailOutbox.ErrorMessage,
+			&emailOutbox.IdempotencyKey, &emailOutbox.MetaCreatedAt, &emailOutbox.MetaUpdatedAt); err != nil {
 			log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][ResolvePendingEmailOutbox] failed to scan email outbox")
 			return nil, err
 		}
@@ -86,10 +89,6 @@ func (r *InternalMemoRepositoryPostgres) ResolvePendingEmailOutbox(ctx context.C
 }
 
 func (r *InternalMemoRepositoryPostgres) UpdateErrorProcess(ctx context.Context, outbox *model.EmailOutbox) error {
-	updateQuery := fmt.Sprintf(
-		emailOutboxQueries.updateOutboxProcess,
-		"($1, $2, $3, $4, $5, $6)",
-	)
 	argsList := []any{
 		outbox.RetryCount,
 		outbox.ErrorMessage,
@@ -98,7 +97,7 @@ func (r *InternalMemoRepositoryPostgres) UpdateErrorProcess(ctx context.Context,
 		outbox.MetaUpdatedAt,
 		outbox.ID,
 	}
-	_, err := r.exec(ctx, updateQuery, argsList)
+	_, err := r.exec(ctx, emailOutboxQueries.updateErrorOutboxProcess, argsList)
 	if err != nil {
 		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][UpdateErrorProcess] failed to update email outbox")
 		return err
@@ -107,17 +106,13 @@ func (r *InternalMemoRepositoryPostgres) UpdateErrorProcess(ctx context.Context,
 }
 
 func (r *InternalMemoRepositoryPostgres) UpdateSentOutboxProcess(ctx context.Context, outbox *model.EmailOutbox) error {
-	updateQuery := fmt.Sprintf(
-		emailOutboxQueries.updateOutboxProcess,
-		"($1, $2, $3, $4, $5, $6)",
-	)
 	argsList := []any{
 		outbox.SentAt,
 		outbox.LastAttemptAt,
 		outbox.MetaUpdatedAt,
 		outbox.ID,
 	}
-	_, err := r.exec(ctx, updateQuery, argsList)
+	_, err := r.exec(ctx, emailOutboxQueries.UpdateSentOutboxProcess, argsList)
 	if err != nil {
 		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][UpdateSentOutboxProcess] failed to update email outbox")
 		return err

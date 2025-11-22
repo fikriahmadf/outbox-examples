@@ -10,6 +10,7 @@ import (
 	"github.com/fikriahmadf/outbox-examples/external/domain/notif_publisher/service"
 	"github.com/fikriahmadf/outbox-examples/infras"
 	"github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/repository"
+	service2 "github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/service"
 	"github.com/fikriahmadf/outbox-examples/internal/handlers/internal_memo"
 	"github.com/fikriahmadf/outbox-examples/transport/http"
 	"github.com/fikriahmadf/outbox-examples/transport/http/router"
@@ -26,6 +27,7 @@ func InitializeServer() (*http.HTTP, error) {
 	memoHandler := internal_memo.ProvideMemoHandler(config, internalMemoRepositoryPostgres, externalNotifPublisherServiceImpl)
 	domainHandlers := router.ProvideDomainHandlers(memoHandler)
 	routerRouter := router.ProvideRouter(domainHandlers)
-	httpHTTP := http.ProvideHTTP(postgresConn, config, routerRouter)
+	internalMemoServiceImpl := service2.ProvideInternalMemoService(config, internalMemoRepositoryPostgres, externalNotifPublisherServiceImpl)
+	httpHTTP := http.ProvideHTTP(postgresConn, config, routerRouter, internalMemoServiceImpl)
 	return httpHTTP, nil
 }

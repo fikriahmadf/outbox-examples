@@ -64,16 +64,20 @@ func (s *InternalMemoServiceImpl) OutboxProcessor(ctx context.Context) error {
 
 			// update process
 			emailOutbox.RetryCount = emailOutbox.RetryCount + 1
-			emailOutbox.ErrorMessage = sql.NullString{String: errMessage}
+			emailOutbox.ErrorMessage = sql.NullString{String: errMessage, Valid: true}
 			emailOutbox.Status = statusProcessor.String()
-			emailOutbox.LastAttemptAt = sql.NullTime{Time: time.Now()}
-			emailOutbox.MetaUpdatedAt = sql.NullTime{Time: time.Now()}
+			emailOutbox.LastAttemptAt = sql.NullTime{Time: time.Now(), Valid: true}
+			emailOutbox.MetaUpdatedAt = sql.NullTime{Time: time.Now(), Valid: true}
 			if err := tx.UpdateErrorProcess(ctx, &emailOutbox); err != nil {
 				log.Error().Err(err).Msg("[EmailOutboxService][OutboxProcessor] failed to update outbox process")
 				return err
 			}
 			continue
 		}
+
+		emailOutbox.SentAt = sql.NullTime{Time: time.Now(), Valid: true}
+		emailOutbox.LastAttemptAt = sql.NullTime{Time: time.Now(), Valid: true}
+		emailOutbox.MetaUpdatedAt = sql.NullTime{Time: time.Now(), Valid: true}
 
 		if err := tx.UpdateSentOutboxProcess(ctx, &emailOutbox); err != nil {
 			log.Error().Err(err).Msg("[EmailOutboxService][OutboxProcessor] failed to update outbox process")
