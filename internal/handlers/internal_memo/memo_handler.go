@@ -25,11 +25,40 @@ func (h *MemoHandler) CreateMemo(c *fiber.Ctx) error {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "invalid request body"})
 	}
 
-	newModel := req.ToNewModel()
-	if err := h.MemoRepo.CreateMemo(c.Context(), &newModel); err != nil {
+	ctx := c.Context()
+
+	// init db tx
+	tx, err := h.InternalMemoRepository.BeginTx(ctx)
+	if err != nil {
+		log.Warn().Err(err).Msg("[MemoHandler][CreateMemo] failed to begin transaction")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to begin transaction"})
+	}
+
+	defer func() {
+		if err != nil {
+			errRollback := tx.Rollback(ctx)
+			if errRollback != nil {
+				log.Error().Err(errRollback).Msg("[MemoHandler][CreateMemo][Rollback] rollback transaction failed")
+			}
+			return
+		}
+		errCommit := tx.Commit(ctx)
+		if errCommit != nil {
+			log.Error().Err(errCommit).Msg("[MemoHandler][CreateMemo][Commit] commit transaction failed")
+		}
+	}()
+
+	newMemoModel := req.ToNewModel()
+	if err = tx.CreateMemo(c.Context(), &newMemoModel); err != nil {
 		log.Warn().Err(err).Msg("[MemoHandler][CreateMemo] failed to create memo")
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create memo"})
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(newModel)
+	newOutboxModel := newMemoModel.ToOutboxModel(model.MemoEventCreated, h.Config.Email.Memo.Recipient)
+	if err = tx.CreateEmailOutbox(c.Context(), &newOutboxModel); err != nil {
+		log.Warn().Err(err).Msg("[MemoHandler][CreateMemo] failed to create email outbox")
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "failed to create email outbox"})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(newMemoModel)
 }

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/fikriahmadf/outbox-examples/internal/domain/internal_memo/model"
-	"github.com/fikriahmadf/outbox-examples/shared/failure"
+	"github.com/rs/zerolog/log"
 )
 
 const MEMO_PREFIX = "MEMO-"
@@ -24,7 +24,8 @@ func (r *InternalMemoRepositoryPostgres) GetCountMemo(ctx context.Context) (int,
 	var count int
 	err := r.DB.Read.GetContext(ctx, &count, memoQueries.countMemo)
 	if err != nil {
-		return 0, failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][GetCountMemo] failed to get count memo")
+		return 0, err
 	}
 	return count, nil
 }
@@ -33,10 +34,11 @@ func (r *InternalMemoRepositoryPostgres) CreateMemo(ctx context.Context, memo *m
 
 	count, err := r.GetCountMemo(ctx)
 	if err != nil {
-		return failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][CreateMemo] failed to get count memo")
+		return err
 	}
 
-	insertQuery := fmt.Sprintf(memoQueries.insertMemo, "(id, memo_number_prefix, memo_number_sequence, department_code, title, purpose, created_at, updated_at)", "($1, $2, $3, $4, $5, $6, $7, $8)")
+	insertQuery := fmt.Sprintf(memoQueries.insertMemo, "(id, memo_number_prefix, memo_number_sequence, department_code, title, purpose, created_at)", "($1, $2, $3, $4, $5, $6, $7)")
 	argsList := []any{
 		memo.ID,
 		MEMO_PREFIX,
@@ -45,13 +47,17 @@ func (r *InternalMemoRepositoryPostgres) CreateMemo(ctx context.Context, memo *m
 		memo.Title,
 		memo.Purpose,
 		memo.CreatedAt,
-		memo.UpdatedAt,
 	}
 
 	_, err = r.exec(ctx, insertQuery, argsList)
 	if err != nil {
-		return failure.AddFuncName(failure.InternalError(err))
+		log.Error().Err(err).Msg("[InternalMemoRepositoryPostgres][CreateMemo] failed to get count memo")
+		return err
 	}
+
+	memo.MemoNumberSequence = count + 1
+	memo.MemoNumberPrefix = MEMO_PREFIX
+
 	return nil
 }
 

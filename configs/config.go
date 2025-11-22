@@ -66,6 +66,11 @@ type Config struct {
 		}
 		LogLevel string `mapstructure:"LOG_LEVEL"`
 	}
+	Email struct {
+		Memo struct {
+			Recipient string `mapstructure:"RECIPIENT"`
+		}
+	}
 }
 
 func (c Config) IsServerEnvDevelopment() bool { return c.Server.Env == "development" }
